@@ -16,6 +16,7 @@
 import torch
 from ..dataset import BaseDataset
 from ...modelzoo import AutoTokenizer
+from transformers import GPT2Tokenizer
 
 class OpenDomainDialogueDataset(BaseDataset):
     def __init__(self,
@@ -32,7 +33,9 @@ class OpenDomainDialogueDataset(BaseDataset):
         self.max_text_length = max_text_length
         self.max_label_length = max_label_length
 
-        self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
+        # self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
+        self.tokenizer = GPT2Tokenizer.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-3.5B')
+        self.tokenizer.pad_token = self.tokenizer.unk_token
     
     def convert_single_row_to_example(self, row):
         sentences = row.split('\t')
@@ -45,17 +48,28 @@ class OpenDomainDialogueDataset(BaseDataset):
             history = text + label
             if text == '__null__' or label == '__null__':
                 break
-            encoding = self.tokenizer(text,
-                                      padding='max_length',
-                                      truncation=True,
-                                      max_length=self.max_text_length)
+            # encoding = self.tokenizer(text,
+            #                           padding='max_length',
+            #                           truncation=True,
+            #                           max_length=self.max_text_length)
+            # label_ids = self.tokenizer(label,
+            #                            padding='max_length',
+            #                            truncation=True,
+            #                            max_length=self.max_label_length)['input_ids']
+            # encoding.update({'label_ids': label_ids})
+            # encoding.update({'label': label_ids})
+            # episodes.append(encoding)
+
+            encoded_input = self.tokenizer(history,
+                                           padding='max_length',
+                                           truncation=True,
+                                           max_length=self.max_text_length)
             label_ids = self.tokenizer(label,
                                        padding='max_length',
                                        truncation=True,
-                                       max_length=self.max_label_length)['input_ids']
-            encoding.update({'label_ids': label_ids})
-            encoding.update({'label': label_ids})
-            episodes.append(encoding)
+                                       max_length=self.max_text_length)
+            encoded_input.update({'label_ids': label_ids})
+            episodes.append(encoded_input)
         return episodes
 
     def batch_fn(self, features):

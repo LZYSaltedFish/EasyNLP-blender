@@ -15,6 +15,7 @@
 
 from ...core.predictor import Predictor
 from easynlp.modelzoo import TransformerTokenizer
+from transformers import GPT2Tokenizer
 from ...modelzoo import AutoConfig
 import logging
 import os
@@ -176,13 +177,19 @@ class OpenDomainDialoguePredictor(Predictor):
         vocab_file = os.path.join(local_path, 'vocab.txt')
         codecs_file = os.path.join(local_path, 'dict.codecs')
 
-        self.tokenizer = TransformerTokenizer(
-            vocab_file=vocab_file,
-            codecs_file=codecs_file,
-            tokenizer=config.tokenizer,
-            origin_model_name=user_defined_parameters.get('pretrain_model_name_or_path', '')
-        )
-        self.model = model_cls(pretrained_model_name_or_path=self.model_dir, user_defined_parameters=user_defined_parameters)
+        # self.tokenizer = TransformerTokenizer(
+        #     vocab_file=vocab_file,
+        #     codecs_file=codecs_file,
+        #     tokenizer=config.tokenizer,
+        #     origin_model_name=user_defined_parameters.get('pretrain_model_name_or_path', '')
+        # )
+        self.tokenizer = GPT2Tokenizer.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-3.5B')
+        self.tokenizer.pad_token = self.tokenizer.unk_token
+
+        self.model = model_cls(
+            pretrained_model_name_or_path=self.model_dir,
+            user_defined_parameters=user_defined_parameters,
+            pad_token_id=self.tokenizer.pad_token_id)
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         # self.MUTEX = Lock()
@@ -198,8 +205,10 @@ class OpenDomainDialoguePredictor(Predictor):
         self.beam_size = 10
         self.delimiter = '\n'
         self.delimiter_tok = [self.tokenizer._convert_token_to_id(self.delimiter)]
-        self.END_IDX = self.model.backbone.END_IDX
-        self.START_IDX = self.model.backbone.START_IDX
+        # self.END_IDX = self.model.backbone.END_IDX
+        # self.START_IDX = self.model.backbone.START_IDX
+        self.END_IDX = self.tokenizer.eos_token_id
+        self.START_IDX = self.tokenizer.bos_token_id
 
 
         print(
@@ -209,14 +218,14 @@ class OpenDomainDialoguePredictor(Predictor):
             )
         )
 
-        self.context_data = self.load_context(data_dir)
+        # self.context_data = self.load_context(data_dir)
     
     def preprocess(self):
-        if self.turn_cnt == 0:
-            self.p1, self.p2 = self.get_contexts()
-            if self.p1 != '':
-                context_act = {'id': 'context', 'text': self.p1}
-                print(display_messages(context_act))
+        # if self.turn_cnt == 0:
+        #     self.p1, self.p2 = self.get_contexts()
+        #     if self.p1 != '':
+        #         context_act = {'id': 'context', 'text': self.p1}
+        #         print(display_messages(context_act))
         try:
             reply = self.get_human_reply()
         except StopIteration:
@@ -224,9 +233,9 @@ class OpenDomainDialoguePredictor(Predictor):
             self.reset()
             return
         
-        if self.turn_cnt == 0 and self.p2 != '':
-            context_act = {'id': 'context', 'text': self.p2}
-            self.update_history(context_act)
+        # if self.turn_cnt == 0 and self.p2 != '':
+        #     context_act = {'id': 'context', 'text': self.p2}
+        #     self.update_history(context_act)
         self.update_history(reply)
     
     def predict(self):
@@ -248,10 +257,13 @@ class OpenDomainDialoguePredictor(Predictor):
             beam_preds_scores = None
             preds = None
             maxlen = self.label_truncate
-            beam_preds_scores = self.model._generate(
+            # beam_preds_scores = self.model._generate(
+            #     input, self.beam_size, maxlen
+            # )
+            # preds, _, _ = zip(*beam_preds_scores)
+            preds = self.model._generate(
                 input, self.beam_size, maxlen
             )
-            preds, _, _ = zip(*beam_preds_scores)
             text = self._v2t(preds[0].tolist()) if preds is not None else None
             reply['text'] = text
         
