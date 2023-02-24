@@ -24,8 +24,9 @@ class OpenDomainDialogue(Application):
     def __init__(self, pretrained_model_name_or_path=None, **kwargs):
         super().__init__()
 
-        self.backbone = GPT2LMHeadModel.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-3.5B')
-        self.NULL_IDX = kwargs.get('pad_token_id')
+        self.backbone = GPT2LMHeadModel.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-110M')
+        self.PAD_IDX = kwargs.get('pad_token_id')
+        self.EOS_IDX = kwargs.get('eos_token_id')
 
         # if kwargs.get('from_config'):
         #     self.config = kwargs.get('from_config')
@@ -34,7 +35,7 @@ class OpenDomainDialogue(Application):
         #     self.config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
         #     self.backbone = AutoModel.from_pretrained(pretrained_model_name_or_path)
         self.criterion = torch.nn.CrossEntropyLoss(
-            ignore_index=self.NULL_IDX, reduction='none'
+            ignore_index=self.PAD_IDX, reduction='none'
         )
     
     def forward(self, inputs):
@@ -90,4 +91,9 @@ class OpenDomainDialogue(Application):
         input_len = input_ids.shape[-1]
         # return self.backbone._generate(model_input, beam_size, max_ts)
         gen_config = GenerationConfig(min_new_tokens=2, max_new_tokens=max_ts, num_beams=beam_size)
-        return self.backbone.generate(inputs=input_ids, generation_config=gen_config)[:, input_len:]
+        return self.backbone.generate(inputs=input_ids,
+                                      generation_config=gen_config,
+                                      pad_token_id=self.PAD_IDX,
+                                      eos_token_id=self.EOS_IDX,
+                                      do_sample=True,
+                                      top_p=0.6)[:, input_len:]

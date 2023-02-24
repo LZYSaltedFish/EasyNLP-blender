@@ -183,13 +183,19 @@ class OpenDomainDialoguePredictor(Predictor):
         #     tokenizer=config.tokenizer,
         #     origin_model_name=user_defined_parameters.get('pretrain_model_name_or_path', '')
         # )
-        self.tokenizer = GPT2Tokenizer.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-3.5B')
-        self.tokenizer.pad_token = self.tokenizer.unk_token
+        self.tokenizer = GPT2Tokenizer.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-110M')
+        pad_token = '<pad>'
+        bos_token = '<bos>'
+        self.tokenizer.add_tokens(pad_token)
+        self.tokenizer.add_tokens(bos_token)
+        self.tokenizer.pad_token = pad_token
+        self.tokenizer.bos_token = bos_token
 
         self.model = model_cls(
             pretrained_model_name_or_path=self.model_dir,
             user_defined_parameters=user_defined_parameters,
-            pad_token_id=self.tokenizer.pad_token_id)
+            pad_token_id=self.tokenizer.pad_token_id,
+            eos_token_id=self.tokenizer.eos_token_id)
         if torch.cuda.is_available():
             self.model = self.model.cuda()
         # self.MUTEX = Lock()
