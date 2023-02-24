@@ -86,7 +86,8 @@ class OpenDomainDialogue(Application):
     def _generate(self, input, beam_size, max_ts):
         # model_input = input['text_vec'].unsqueeze(0)
         self.backbone.eval()
-        input_len = input['input_ids'].shape[-1]
+        input_ids = input['text_vec'].view(1, -1)
+        input_len = input_ids.shape[-1]
         # return self.backbone._generate(model_input, beam_size, max_ts)
-        gen_config = GenerationConfig(min_new_tokens=2, max_new_tokens=128, num_beams=10)
-        return self.backbone.generate(**input, generation_config=gen_config)[:, input_len:]
+        gen_config = GenerationConfig(min_new_tokens=2, max_new_tokens=max_ts, num_beams=beam_size)
+        return self.backbone.generate(inputs=input_ids, generation_config=gen_config)[:, input_len:]
