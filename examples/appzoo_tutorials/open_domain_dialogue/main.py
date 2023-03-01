@@ -44,7 +44,9 @@ if __name__ == "__main__":
 
         model = get_application_model(app_name=args.app_name,
                                       pretrained_model_name_or_path=pretrained_model_name_or_path,
-                                      user_defined_parameters=user_defined_parameters)
+                                      user_defined_parameters=user_defined_parameters,
+                                      pad_token_id=valid_dataset.tokenizer.pad_token_id,
+                                      eos_token_id=valid_dataset.tokenizer.eos_token_id)
         
         train_dataset = OpenDomainDialogueDataset(
             pretrained_model_name_or_path=args.pretrained_model_name_or_path,

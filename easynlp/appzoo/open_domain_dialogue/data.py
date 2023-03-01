@@ -35,16 +35,22 @@ class OpenDomainDialogueDataset(BaseDataset):
 
         # self.tokenizer = AutoTokenizer.from_pretrained(pretrained_model_name_or_path, **kwargs)
         self.tokenizer = GPT2Tokenizer.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-3.5B')
-        self.tokenizer.pad_token = self.tokenizer.unk_token
+        pad_token = '<pad>'
+        bos_token = '<bos>'
+        self.tokenizer.add_tokens(pad_token)
+        self.tokenizer.add_tokens(bos_token)
+        self.tokenizer.pad_token = pad_token
+        self.tokenizer.bos_token = bos_token
+        self.tokenizer.truncation_side = 'left'
     
     def convert_single_row_to_example(self, row):
         sentences = row.split('\t')
         episodes = []
         history = ''
         for turn in range(len(sentences) // 2):
-            text = sentences[turn * 2].replace('\\n', '\n')
+            text = sentences[turn * 2].replace('\\n', '\n') + self.tokenizer.eos_token
             text = history + text
-            label = sentences[(turn * 2) + 1].replace('\\n', '\n')
+            label = sentences[(turn * 2) + 1].replace('\\n', '\n') + self.tokenizer.eos_token
             history = text + label
             if text == '__null__' or label == '__null__':
                 break
@@ -64,11 +70,7 @@ class OpenDomainDialogueDataset(BaseDataset):
                                            padding='max_length',
                                            truncation=True,
                                            max_length=self.max_text_length)
-            label_ids = self.tokenizer(label,
-                                       padding='max_length',
-                                       truncation=True,
-                                       max_length=self.max_text_length)
-            encoded_input.update({'label_ids': label_ids})
+            encoded_input.update({'label_ids': encoded_input['input_ids']})
             episodes.append(encoded_input)
         return episodes
 

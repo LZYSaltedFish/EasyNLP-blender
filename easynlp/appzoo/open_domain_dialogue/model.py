@@ -24,6 +24,7 @@ class OpenDomainDialogue(Application):
     def __init__(self, pretrained_model_name_or_path=None, **kwargs):
         super().__init__()
 
+        self.config = AutoConfig.from_pretrained(pretrained_model_name_or_path)
         self.backbone = GPT2LMHeadModel.from_pretrained('IDEA-CCNL/Wenzhong-GPT2-110M')
         self.PAD_IDX = kwargs.get('pad_token_id')
         self.EOS_IDX = kwargs.get('eos_token_id')
@@ -64,24 +65,24 @@ class OpenDomainDialogue(Application):
     def compute_loss(self, forward_outputs, label_ids, **kwargs):
         # logits_view: (bsz * output_len) * vocab_size
         # label_ids: bsz * output_len
-        label_len = label_ids.shape[-1]
-        logits = forward_outputs['logits'][:,-(label_len+1):-1]
+        label_ids = label_ids[:, 1:]
+        logits = forward_outputs['logits'][:, :-1]
         logits_view = logits.reshape(-1, logits.size(-1))
-        loss = self.criterion(logits_view, label_ids.view(-1))
-        loss = loss.view(forward_outputs['probabilities'].shape[:-1]).sum(dim=1)
+        loss = self.criterion(logits_view, label_ids.reshape(-1))
+        loss = loss.view(forward_outputs['probabilities'][:, :-1].shape[:-1]).sum(dim=1)
         loss = loss.sum()
 
-        notnull = label_ids.ne(self.NULL_IDX)
+        notnull = label_ids.ne(self.PAD_IDX)
         target_tokens = notnull.long().sum()
         loss /= target_tokens
         return {"loss": loss}
 
     def compute_token_loss(self, forward_outputs, label_ids, **kwargs):
-        label_len = label_ids.shape[-1]
-        logits = forward_outputs['logits'][:,-(label_len+1):-1]
+        label_ids = label_ids[:, 1:]
+        logits = forward_outputs['logits'][:, :-1]
         logits_view = logits.reshape(-1, logits.size(-1))
-        loss = self.criterion(logits_view, label_ids.view(-1))
-        loss = loss.view(forward_outputs['probabilities'].shape[:-1]).sum(dim=1)
+        loss = self.criterion(logits_view, label_ids.reshape(-1))
+        loss = loss.view(forward_outputs['probabilities'][:, :-1].shape[:-1]).sum(dim=1)
         return {'loss': loss}
     
     def _generate(self, input, beam_size, max_ts):

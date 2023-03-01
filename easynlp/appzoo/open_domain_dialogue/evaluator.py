@@ -54,12 +54,13 @@ class OpenDomainDialogueEvaluator(Evaluator):
             total_spent_time += infer_end_time - infer_start_time
 
             assert 'logits' in outputs
-            logits = outputs['logits']
-            preds = outputs['predictions']
+            logits = outputs['logits'][:, :-1]
+            preds = outputs['predictions'][:, :-1]
             loss = model.compute_token_loss(outputs, label_ids)['loss']
 
-            null_idx = model.backbone.NULL_IDX
-            notnull = label_ids.ne(null_idx)
+            pad_idx = model.PAD_IDX
+            label_ids = label_ids[:, 1:]
+            notnull = label_ids.ne(pad_idx)
             target_tokens = notnull.long().sum(dim=1)
             correct = ((label_ids == preds) * notnull).sum(dim=-1)
 

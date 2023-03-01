@@ -1,16 +1,16 @@
 export CUDA_VISIBLE_DEVICES=$1
 
-if [ ! -f ./train.tsv ]; then
-  wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/train.tsv
-fi
+# if [ ! -f ./train.tsv ]; then
+#   wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/train.tsv
+# fi
 
-if [ ! -f ./valid.tsv ]; then
-  wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/valid.tsv
-fi
+# if [ ! -f ./valid.tsv ]; then
+#   wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/valid.tsv
+# fi
 
-if [ ! -f ./persona.tsv ]; then
-  wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/persona.tsv
-fi
+# if [ ! -f ./persona.tsv ]; then
+#   wget http://atp-modelzoo-sh.oss-cn-shanghai.aliyuncs.com/release/tutorials/open_domain_dialogue/persona.tsv
+# fi
 
 MASTER_ADDR=localhost
 MASTER_PORT=$(shuf -n 1 -i 10000-65535)
@@ -27,12 +27,12 @@ if [ "$mode" = "train" ]; then
   python -m torch.distributed.launch $DISTRIBUTED_ARGS main.py \
     --mode $mode \
     --worker_gpu=1 \
-    --tables=train.tsv,valid.tsv \
-    --checkpoint_dir=./chat_model/ \
+    --tables=/mnt/workspace/workgroup/lizhenyu/blender_data/datasets/pretrain_train.tsv,/mnt/workspace/workgroup/lizhenyu/blender_data/datasets/pretrain_valid.tsv \
+    --checkpoint_dir=/mnt/workspace/workgroup/lizhenyu/zh_ckpt/110M/ \
     --learning_rate=3e-5  \
     --epoch_num=3  \
     --random_seed=42 \
-    --save_checkpoint_steps=50 \
+    --save_checkpoint_steps=1000 \
     --sequence_length=512 \
     --micro_batch_size=1 \
     --app_name=open_domain_dialogue \
